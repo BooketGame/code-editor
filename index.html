@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HTML Code Editor</title>
+  <style>
+    :root{
+      --bg:#071026;
+      --panel:#07162a;
+      --accent:#0ea5ff;
+      --muted:#94a3b8;
+      --editor-bg:#081328;
+      --preview-bg:#ffffff;
+      --radius:8px;
+      --gap:18px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#020617 0%, #04102a 100%);color:#e6eef8;}
+    .app{max-width:1300px;margin:18px auto;padding:18px;box-sizing:border-box;}
+    .header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+    .title{font-size:18px;font-weight:700}
+    .controls{display:flex;gap:8px;align-items:center}
+    button{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--accent);padding:9px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+    button.ghost{background:transparent;color:var(--muted);border-color:rgba(255,255,255,0.03)}
+    button.primary{background:var(--accent);color:#012; border:none}
+    button:active{transform:translateY(1px)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
+    .panel{border-radius:var(--radius);overflow:hidden;box-shadow:0 6px 20px rgba(2,6,23,0.6);}
+    .left{background:linear-gradient(180deg,#041229 0%, #071a33 100%);padding:16px;min-height:540px}
+    .right{background:var(--preview-bg);min-height:540px;padding:12px}
+    .editor-label{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .editor-label small{color:var(--muted)}
+    textarea{
+      width:100%;
+      height:calc(100% - 44px);
+      min-height:420px;
+      resize:vertical;
+      background:transparent;
+      color:#dff1ff;
+      border:1px solid rgba(255,255,255,0.03);
+      padding:14px;
+      border-radius:8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+      font-size:13.5px;
+      line-height:1.45;
+      box-sizing:border-box;
+    }
+    .preview-wrap{height:100%;display:flex;flex-direction:column}
+    iframe.preview{width:100%;height:100%;border:1px solid #e6eef8;border-radius:6px;background:var(--preview-bg)}
+    .bottom-row{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+    .muted{color:var(--muted);font-size:13px}
+    input[type="file"]{display:none}
+    .bar-buttons{display:flex;gap:8px}
+    .top-right-buttons{display:flex;gap:8px}
+    .download-btn{background:#111827;color:#fff;border-radius:6px;padding:8px 12px;border:0}
+    /* small screens */
+    @media (max-width:900px){
+      .grid{grid-template-columns:1fr;gap:12px}
+      .right{min-height:360px}
+      textarea{min-height:240px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div class="title">Game Loader (paste your HTML & press Run)</div>
+      <div class="top-right-buttons">
+        <button id="runBtn" class="primary">Run in iframe</button>
+        <button id="openNewBtn" class="ghost">Open in new tab</button>
+        <button id="clearBtn" class="ghost">Clear</button>
+        <button id="downloadBtn" class="ghost">Download HTML</button>
+        <label style="display:inline-block">
+          <input id="fileInput" type="file" accept=".html,text/html" />
+          <button class="ghost">Open file</button>
+        </label>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="panel left">
+        <div class="editor-label">
+          <div><strong>Paste your complete HTML here</strong><br><small class="muted">Start with &lt;!DOCTYPE html&gt; or &lt;html&gt; — iframe is sandboxed so styles/scripts won’t leak.</small></div>
+          <div style="text-align:right"><small class="muted">Tip: press Tab to insert a tab</small></div>
+        </div>
+
+        <textarea id="editor" spellcheck="false" placeholder="&lt;!-- Paste complete HTML here. Example minimal HTML: --&gt;&#10;&lt;!doctype html&gt;&#10;&lt;html&gt;&#10;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;&lt;title&gt;Your Game&lt;/title&gt;&lt;/head&gt;&lt;body&gt;&#10;&lt;!-- game here --&gt;&lt;/body&gt;&lt;/html&gt;">
+<!-- Paste complete HTML here.
+Example minimal HTML:
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Your Game</title></head><body>
+<!-- game here --></body></html>
+-->
+</textarea>
+      </div>
+
+      <div class="panel right preview-wrap">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div><strong>Sandboxed preview</strong></div>
+          <div><small class="muted">Sandbox: <code>allow-scripts</code> only — prevents leaks & page access</small></div>
+        </div>
+        <iframe id="preview" class="preview" sandbox="allow-scripts"></iframe>
+        <div class="bottom-row" style="margin-top:10px">
+          <div class="muted">Paste your game HTML on the left, click <strong>Run in iframe</strong>. When satisfied, use <strong>Open in new tab</strong> to spawn as standalone.</div>
+          <div>
+            <button id="downloadHTML" class="download-btn">Download HTML file</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // get elements
+    const editor = document.getElementById('editor');
+    const preview = document.getElementById('preview');
+    const runBtn = document.getElementById('runBtn');
+    const openNewBtn = document.getElementById('openNewBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const fileInput = document.getElementById('fileInput');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const downloadHTML = document.getElementById('downloadHTML');
+
+    // autosave editor to localStorage
+    const LS_KEY = 'gameLoader.html';
+    (function loadLS(){
+      try{
+        const s = localStorage.getItem(LS_KEY);
+        if(s) editor.value = s;
+      }catch(e){}
+    })();
+    editor.addEventListener('input', () => {
+      try{ localStorage.setItem(LS_KEY, editor.value); }catch(e){}
+    });
+
+    // enable tab insertion inside textarea
+    editor.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        // insert tab
+        editor.value = editor.value.substring(0, start) + '\t' + editor.value.substring(end);
+        editor.selectionStart = editor.selectionEnd = start + 1;
+      }
+    });
+
+    function runInIframe() {
+      // use srcdoc so browsers treat it as fresh doc (scripts execute when sandbox allows)
+      preview.srcdoc = editor.value;
+    }
+
+    function openInNewTab() {
+      try {
+        const html = editor.value;
+        // create blob and open it so scripts run normally in new tab (no sandbox)
+        const blob = new Blob([html], {type: 'text/html'});
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        // revoke after a short delay (give tab time to load)
+        setTimeout(() => URL.revokeObjectURL(url), 20000);
+      } catch(e) {
+        alert('Open failed: ' + e);
+      }
+    }
+
+    function clearEditor(){
+      if(confirm('Clear editor? This will remove current HTML.')) {
+        editor.value = '';
+        preview.srcdoc = '';
+        try{ localStorage.removeItem(LS_KEY); }catch(e){}
+      }
+    }
+
+    // open local file into editor
+    fileInput.addEventListener('change', (ev) => {
+      const f = ev.target.files && ev.target.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        editor.value = String(reader.result);
+        // autosave
+        try{ localStorage.setItem(LS_KEY, editor.value); }catch(e){}
+      };
+      reader.readAsText(f);
+      // reset to allow same file again
+      fileInput.value = '';
+    });
+
+    // download as file (named page.html)
+    function downloadCurrent(filename = 'page.html') {
+      const blob = new Blob([editor.value], {type: 'text/html'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 15000);
+    }
+
+    // button handlers
+    runBtn.addEventListener('click', runInIframe);
+    openNewBtn.addEventListener('click', openInNewTab);
+    clearBtn.addEventListener('click', clearEditor);
+    downloadBtn.addEventListener('click', () => downloadCurrent('page.html'));
+    downloadHTML.addEventListener('click', () => downloadCurrent('page.html'));
+
+    // allow Ctrl/Cmd+Enter to run quickly
+    editor.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        runInIframe();
+      }
+    });
+
+    // initial preview if localStorage has something
+    if (editor.value && editor.value.trim().length > 0) {
+      preview.srcdoc = editor.value;
+    }
+  </script>
+</body>
+</html>
